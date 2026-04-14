@@ -2,9 +2,12 @@
 
 Real-time pre-market scanner for intraday traders. Aggregates COT positioning, macro data, retail sentiment, economic calendar, and market fear/greed into a single dashboard.
 
-![Dark Theme](https://img.shields.io/badge/theme-dark%20%2F%20light-blue)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+
+| Dark Theme | Light Theme |
+|:---:|:---:|
+| ![Dark](docs/screenshot-dark.png) | ![Light](docs/screenshot-light.png) |
 
 ## Features
 
