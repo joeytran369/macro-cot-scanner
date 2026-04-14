@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Desk</title>
+<style>
+  :root, [data-theme="dark"] {
+    --bg: #0a0e17;
+    --panel: #111827;
+    --border: #1e293b;
+    --text: #e2e8f0;
+    --dim: #64748b;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #eab308;
+    --blue: #3b82f6;
+    --purple: #a855f7;
+    --teal: #14b8a6;
+    --orange: #f97316;
+    --hover: #1a2332;
+    --row-border: #1a2332;
+  }
+  [data-theme="light"] {
+    --bg: #f1f5f9;
+    --panel: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --dim: #64748b;
+    --green: #16a34a;
+    --red: #dc2626;
+    --yellow: #ca8a04;
+    --blue: #2563eb;
+    --purple: #7c3aed;
+    --teal: #0d9488;
+    --orange: #ea580c;
+    --hover: #f8fafc;
+    --row-border: #f1f5f9;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--blue);
+  }
+  .header .meta {
+    display: flex;
+    gap: 20px;
+    font-size: 12px;
+    color: var(--dim);
+  }
+  .session-badge {
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 11px;
+  }
+  .risk-badge {
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 11px;
+  }
+
+  /* Grid layout */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 1px;
+    background: var(--border);
+    min-height: calc(100vh - 50px);
+  }
+  .panel {
+    background: var(--panel);
+    padding: 16px;
+  }
+  .panel-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--dim);
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Market Scanner Table */
+  .scanner { grid-column: 1 / -1; }
+
+  /* News panel */
+  .news-live { color: var(--red); font-weight: 700; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--dim);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  th:hover { color: var(--text); }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--row-border);
+    transition: background 0.2s;
+  }
+  tr:hover td { background: var(--hover); }
+  tr.bullish td { border-left: 3px solid var(--green); }
+  tr.bearish td { border-left: 3px solid var(--red); }
+  tr.neutral td { border-left: 3px solid transparent; }
+
+  .price { font-weight: 600; font-size: 14px; }
+  .chg-pos { color: var(--green); }
+  .chg-neg { color: var(--red); }
+  .chg-flat { color: var(--dim); }
+
+  .cot-bar {
+    display: inline-block;
+    height: 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  .bias-tag {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .bias-buy { background: rgba(34,197,94,0.15); color: var(--green); }
+  .bias-sell { background: rgba(239,68,68,0.15); color: var(--red); }
+  .bias-neutral { background: rgba(100,116,139,0.1); color: var(--dim); }
+
+  .edge { font-size: 11px; color: var(--yellow); }
+  .no-edge { font-size: 11px; color: var(--dim); }
+
+  /* Macro panel */
+  .macro-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .macro-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+  }
+  .macro-card .label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+  .macro-card .value { font-size: 20px; font-weight: 700; margin-top: 4px; }
+  .macro-card .sub { font-size: 11px; color: var(--dim); margin-top: 2px; }
+
+  /* COT Detail */
+  .cot-detail {
+    font-size: 13px;
+  }
+  .cot-detail .pair-name {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .cot-detail .stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--row-border);
+  }
+  .cot-detail .stat .label { color: var(--dim); }
+
+  .cot-meter {
+    width: 100%;
+    height: 10px;
+    background: var(--row-border);
+    border-radius: 5px;
+    margin: 8px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .cot-meter-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.5s;
+  }
+  .cot-meter-marker {
+    position: absolute;
+    top: -2px;
+    width: 2px;
+    height: 14px;
+    background: white;
+    transition: left 0.5s;
+  }
+
+  /* News */
+  .news-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--row-border);
+  }
+  .news-impact {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+  }
+  .impact-high { background: var(--red); }
+  .impact-medium { background: var(--yellow); }
+  .impact-low { background: var(--dim); }
+
+  /* Filters */
+  .filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .filter-btn {
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--dim);
+    cursor: pointer;
+    font-size: 11px;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .filter-btn.active {
+    background: var(--blue);
+    color: white;
+    border-color: var(--blue);
+  }
+  .filter-btn:hover { border-color: var(--blue); color: var(--text); }
+
+  /* Connection status */
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+  }
+
+  /* Theme toggle */
+  .theme-toggle {
+    background: var(--border);
+    border: 1px solid var(--dim);
+    color: var(--text);
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    transition: all 0.2s;
+  }
+  .theme-toggle:hover { border-color: var(--blue); }
+  .connected { background: var(--green); }
+  .disconnected { background: var(--red); }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 768px) {
+    .grid { grid-template-columns: 1fr; }
+    .macro-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>TRADING DESK</h1>
+  <div class="meta">
+    <span id="session-badge" class="session-badge"></span>
+    <span id="fear-greed-badge" class="risk-badge"></span>
+    <span><span id="ws-status" class="status-dot disconnected"></span><span id="ws-text">Connecting...</span></span>
+    <span id="clock"></span>
+    <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">Light</button>
+  </div>
+</div>
+
+<!-- Insight Toggle -->
+<div style="background:var(--panel);border-bottom:1px solid var(--border);text-align:right;padding:2px 20px">
+  <button onclick="toggleInsight()" id="insight-toggle" style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;font-family:inherit">Hide Insight</button>
+</div>
+
+<!-- Insight Quote -->
+<div id="insight-block" style="
+  padding: 24px 40px;
+  text-align: center;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+">
+  <div style="max-width:900px;margin:0 auto">
+    <div style="font-size:50px;color:var(--text);font-family:Georgia,serif;line-height:0.5;margin-bottom:8px;text-align:left;opacity:0.4">&ldquo;</div>
+    <div id="insight" style="
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--text);
+      font-family: Helvetica, Arial, sans-serif;
+      font-style: normal;
+      font-weight: 300;
+      padding: 0 20px;
+      -webkit-font-smoothing: antialiased;
+    "></div>
+    <div style="font-size:50px;color:var(--text);font-family:Georgia,serif;line-height:0.5;margin-top:8px;text-align:right;opacity:0.4">&rdquo;</div>
+  </div>
+</div>
+
+<div class="grid">
+  <!-- Market Scanner -->
+  <div class="panel scanner">
+    <div class="panel-title">Market Scanner</div>
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="bullish">Bullish</button>
+      <button class="filter-btn" data-filter="bearish">Bearish</button>
+      <button class="filter-btn" data-filter="validated">Validated Only</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th data-sort="key">Asset</th>
+          <th data-sort="price">Price</th>
+          <th data-sort="daily_chg">Day %</th>
+          <th data-sort="weekly_chg">Week %</th>
+          <th data-sort="cot_sm">COT SM</th>
+          <th data-sort="retail_long">Retail %L</th>
+          <th data-sort="bias_raw">Bias</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="scanner-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Macro Panel -->
+  <div class="panel">
+    <div class="panel-title">Macro Environment</div>
+    <div class="macro-grid" id="macro-grid"></div>
+  </div>
+
+  <!-- News Calendar -->
+  <div class="panel">
+    <div class="panel-title">News Calendar</div>
+    <div class="filters" style="margin-bottom:8px">
+      <button class="filter-btn active" data-news="today">Today</button>
+      <button class="filter-btn" data-news="week">This Week</button>
+    </div>
+    <div id="news-panel" style="max-height:300px;overflow-y:auto">
+      <div style="color:var(--dim);text-align:center;padding:20px">Loading...</div>
+    </div>
+  </div>
+
+  <!-- COT Detail -->
+  <div class="panel">
+    <div class="panel-title">COT Detail <span id="cot-detail-pair" style="color:var(--blue)"></span></div>
+    <div class="cot-detail" id="cot-detail">
+      <div style="color:var(--dim);text-align:center;padding:40px">Click a row to view COT detail</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let data = null;
+let filter = 'all';
+let newsFilter = 'today';
+let sortKey = 'cot_sm';
+let sortDir = -1; // descending by default for COT
+let selectedMarket = null;
+
+// ============================================================
+// WEBSOCKET
+// ============================================================
+let wsFailCount = 0;
+let pollInterval = null;
+
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const ws = new WebSocket(`${proto}//${location.host}/ws`);
+
+  ws.onopen = () => {
+    document.getElementById('ws-status').className = 'status-dot connected';
+    document.getElementById('ws-text').textContent = 'Live';
+    wsFailCount = 0;
+    if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+  };
+
+  ws.onmessage = (e) => {
+    data = JSON.parse(e.data);
+    render();
+  };
+
+  ws.onclose = () => {
+    wsFailCount++;
+    if (wsFailCount >= 3) {
+      // Fallback to HTTP polling
+      document.getElementById('ws-status').className = 'status-dot connected';
+      document.getElementById('ws-text').textContent = 'Polling';
+      if (!pollInterval) {
+        pollInterval = setInterval(fetchSnapshot, 5000);
+        fetchSnapshot();
+      }
+    } else {
+      document.getElementById('ws-status').className = 'status-dot disconnected';
+      document.getElementById('ws-text').textContent = 'Reconnecting...';
+      setTimeout(connectWS, 3000);
+    }
+  };
+
+  ws.onerror = () => ws.close();
+}
+
+function fetchSnapshot() {
+  fetch('/api/snapshot').then(r => r.json()).then(d => {
+    data = d;
+    render();
+  }).catch(() => {});
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render() {
+  if (!data) return;
+  renderHeader();
+  renderScanner();
+  renderMacro();
+  renderNews();
+  renderInsight();
+  if (selectedMarket) renderCOTDetail(selectedMarket);
+}
+
+function renderHeader() {
+  // Session
+  const s = data.session;
+  const badge = document.getElementById('session-badge');
+  badge.textContent = s.name + ' Session';
+  badge.style.background = `${s.color}22`;
+  badge.style.color = s.color;
+
+  // Fear & Greed
+  const fg = data.fear_greed || {score: 50, label: 'Neutral', color: 'gray'};
+  const fgbadge = document.getElementById('fear-greed-badge');
+  fgbadge.textContent = fg.label + ' ' + fg.score;
+  fgbadge.style.background = fg.color === 'green' ? 'rgba(34,197,94,0.15)' : fg.color === 'red' ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.1)';
+  fgbadge.style.color = `var(--${fg.color})`;
+
+  // Clock
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+
+function renderScanner() {
+  let markets = [...data.markets];
+
+  // Filter
+  if (filter === 'bullish') markets = markets.filter(m => m.bias_raw === 'BULLISH');
+  else if (filter === 'bearish') markets = markets.filter(m => m.bias_raw === 'BEARISH');
+  else if (filter === 'validated') markets = markets.filter(m => m.edge !== '');
+
+  // Sort
+  markets.sort((a, b) => {
+    let va = a[sortKey], vb = b[sortKey];
+    if (typeof va === 'string') return sortDir * va.localeCompare(vb);
+    return sortDir * (Math.abs(va - 50) - Math.abs(vb - 50)); // COT: sort by extremeness
+  });
+
+  // For non-COT sorts, use simple numeric
+  if (sortKey !== 'cot_sm') {
+    markets.sort((a, b) => sortDir * ((a[sortKey] || 0) - (b[sortKey] || 0)));
+  }
+
+  const tbody = document.getElementById('scanner-body');
+  tbody.innerHTML = markets.map(m => {
+    const rowClass = m.bias_raw === 'BULLISH' ? 'bullish' : m.bias_raw === 'BEARISH' ? 'bearish' : 'neutral';
+    const priceStr = m.price > 100 ? m.price.toFixed(2) : m.price.toFixed(m.key === 'JPY' ? 2 : 4);
+    const dailyClass = m.daily_chg > 0 ? 'chg-pos' : m.daily_chg < 0 ? 'chg-neg' : 'chg-flat';
+    const weeklyClass = m.weekly_chg > 0 ? 'chg-pos' : m.weekly_chg < 0 ? 'chg-neg' : 'chg-flat';
+
+    // COT bar
+    const cotWidth = Math.max(2, m.cot_sm);
+    const cotColor = m.cot_sm > 75 ? 'var(--green)' : m.cot_sm < 25 ? 'var(--red)' : 'var(--dim)';
+
+    // Bias tag
+    const biasClass = m.bias === 'BUY' ? 'bias-buy' : m.bias === 'SELL' ? 'bias-sell' : 'bias-neutral';
+
+    // Edge
+    const edgeHtml = m.edge ? `<span class="edge">${m.edge}</span>` : ``;
+
+    // Action
+    let action = '';
+    if (m.bias_raw === 'BULLISH') action = m.invert ? `Sell ${m.name}` : `Buy ${m.name}`;
+    if (m.bias_raw === 'BEARISH') action = m.invert ? `Buy ${m.name}` : `Sell ${m.name}`;
+
+    return `<tr class="${rowClass}" onclick="selectMarket('${m.key}')" style="cursor:pointer">
+      <td><strong>${m.key}</strong> <span style="color:var(--dim);font-size:11px">${m.name}</span></td>
+      <td class="price">${priceStr}</td>
+      <td class="${dailyClass}">${m.daily_chg > 0 ? '+' : ''}${m.daily_chg}%</td>
+      <td class="${weeklyClass}">${m.weekly_chg > 0 ? '+' : ''}${m.weekly_chg}%</td>
+      <td>${m.cot_sm.toFixed(1)} <span class="cot-bar" style="width:${cotWidth}px;background:${cotColor}"></span></td>
+      <td style="font-size:11px">${m.retail_long > 0 ? `<span style="color:var(--green)">${m.retail_long}%L</span> <span style="color:var(--red)">${m.retail_short}%S</span>` : '—'}</td>
+      <td><span class="bias-tag ${biasClass}">${m.bias}</span></td>
+      <td style="font-size:12px;${action ? 'color:var(--yellow)' : 'color:var(--dim)'}">${action}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderMacro() {
+  const m = data.macro;
+  const g = data.gauges || {};
+  const fg = data.fear_greed || {score: 50, label: 'Neutral', color: 'gray'};
+
+  const cards = [
+    { label: 'DXY', value: m.DXY || '—', gauge: g.DXY, color: 'blue' },
+    { label: 'US 10Y', value: m.US10Y ? m.US10Y + '%' : '—', gauge: g.US10Y, color: 'purple' },
+    { label: 'VIX', value: m.VIX || '—', gauge: g.VIX, color: m.VIX > 25 ? 'red' : m.VIX > 18 ? 'yellow' : 'green' },
+    { label: 'Yield Curve', value: m.CURVE != null ? (m.CURVE > 0 ? '+' : '') + m.CURVE : '—', gauge: g.CURVE, sub: '10Y-2Y', color: m.CURVE > 0 ? 'green' : 'red' },
+    { label: 'Fed Rate', value: m.FED ? m.FED + '%' : '—', color: 'teal' },
+    { label: 'S&P 500', value: m.SPX ? m.SPX.toLocaleString() : '—', color: 'blue' },
+  ];
+
+  // Fear & Greed as first card (larger)
+  const fgColor = fg.color === 'green' ? 'var(--green)' : fg.color === 'red' ? 'var(--red)' : 'var(--dim)';
+  let html = `<div class="macro-card" style="grid-column:span 3">
+    <div class="label">Fear & Greed</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:4px">
+      <div class="value" style="color:${fgColor};font-size:28px">${fg.score}</div>
+      <div>
+        <div style="font-weight:700;color:${fgColor}">${fg.label}</div>
+        <div class="cot-meter" style="width:200px;margin:4px 0">
+          <div class="cot-meter-fill" style="width:${fg.score}%;background:${fgColor}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--dim);width:200px">
+          <span>Fear</span><span>Neutral</span><span>Greed</span>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  html += cards.map(c => {
+    const gauge = c.gauge;
+    const gaugeHtml = gauge ? `
+      <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+        <div class="cot-meter" style="width:60px;height:6px;margin:0">
+          <div class="cot-meter-fill" style="width:${gauge.pct}%;background:var(--${gauge.color});height:100%"></div>
+        </div>
+        <span style="font-size:10px;color:var(--${gauge.color})">${gauge.level}</span>
+      </div>` : '';
+    return `<div class="macro-card">
+      <div class="label">${c.label}</div>
+      <div class="value" style="color:var(--${c.color})">${c.value}</div>
+      ${c.sub ? `<div class="sub">${c.sub}</div>` : ''}
+      ${gaugeHtml}
+    </div>`;
+  }).join('');
+
+  document.getElementById('macro-grid').innerHTML = html;
+}
+
+function renderCOTDetail(key) {
+  const m = data.markets.find(x => x.key === key);
+  if (!m) return;
+
+  document.getElementById('cot-detail-pair').textContent = m.name;
+
+  const smColor = m.cot_sm > 75 ? 'var(--green)' : m.cot_sm < 25 ? 'var(--red)' : 'var(--blue)';
+  document.getElementById('cot-detail').innerHTML = `
+    <div class="pair-name" style="color:${smColor}">${m.key} — ${m.bias_raw}</div>
+
+    <div style="margin:12px 0">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim)">
+        <span>COT SM Index (institutional)</span>
+        <span style="color:${smColor};font-weight:700">${m.cot_sm.toFixed(1)}</span>
+      </div>
+      <div class="cot-meter">
+        <div class="cot-meter-fill" style="width:${m.cot_sm}%;background:${smColor}"></div>
+      </div>
+    </div>
+
+    ${m.retail_long > 0 ? `<div style="margin:12px 0">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--dim)">
+        <span>Retail Sentiment (OANDA)</span>
+        <span><span style="color:var(--green);font-weight:700">${m.retail_long}% Long</span> / <span style="color:var(--red);font-weight:700">${m.retail_short}% Short</span></span>
+      </div>
+      <div class="cot-meter">
+        <div class="cot-meter-fill" style="width:${m.retail_long}%;background:var(--green)"></div>
+      </div>
+    </div>` : ''}
+
+    <div class="stat"><span class="label">SM Net Position</span><span>${m.cot_net.toLocaleString()}</span></div>
+    <div class="stat"><span class="label">COT Report Date</span><span>${m.cot_date}</span></div>
+    <div class="stat"><span class="label">Edge (IC)</span><span>${m.edge || '—'} ${m.ic ? '(IC=' + m.ic.toFixed(3) + ', p=' + m.pval.toFixed(4) + ')' : ''}</span></div>
+    <div class="stat"><span class="label">Action</span><span style="color:var(--yellow);font-weight:700">${
+      m.bias_raw === 'BULLISH' ? (m.invert ? 'Sell ' : 'Buy ') + m.name :
+      m.bias_raw === 'BEARISH' ? (m.invert ? 'Buy ' : 'Sell ') + m.name : 'No signal'
+    }</span></div>
+  `;
+}
+
+function renderNews() {
+  let news = data.news || [];
+  const panel = document.getElementById('news-panel');
+  const now = new Date();
+  const todayStr = now.toDateString();
+
+  // Client-side filter
+  news = news.filter(n => {
+    const eventDate = new Date(n.timestamp);
+    const delta = (eventDate - now) / 1000;
+
+    switch(newsFilter) {
+      case 'today':
+        return eventDate.toDateString() === todayStr && n.impact !== 'Low';
+      case 'week':
+        return n.impact !== 'Low';
+      default:
+        return eventDate.toDateString() === todayStr && n.impact !== 'Low';
+    }
+  });
+
+  if (news.length === 0) {
+    panel.innerHTML = '<div style="color:var(--dim);text-align:center;padding:20px">No events for this filter</div>';
+    return;
+  }
+
+  // Group by date for "week" view
+  let html = '';
+  let lastDateStr = '';
+
+  news.forEach(n => {
+    const impactDot = n.impact === 'High' ? 'impact-high' : n.impact === 'Medium' ? 'impact-medium' : 'impact-low';
+    const eventDate = new Date(n.timestamp);
+    const localTime = eventDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    const dateStr = eventDate.toLocaleDateString([], {weekday: 'short', month: 'short', day: 'numeric'});
+
+    // Date header for week view
+    if (newsFilter === 'week' && dateStr !== lastDateStr) {
+      const isToday = eventDate.toDateString() === todayStr;
+      html += `<div style="padding:6px 0 4px;font-size:11px;font-weight:700;color:${isToday ? 'var(--blue)' : 'var(--dim)'};border-bottom:1px solid var(--border);margin-top:${lastDateStr ? '8px' : '0'}">${dateStr}${isToday ? ' — TODAY' : ''}</div>`;
+      lastDateStr = dateStr;
+    }
+
+    const delta = (eventDate - now) / 1000;
+    let countdown;
+    if (delta <= 0 && delta > -7200) {
+      countdown = '<span class="news-live">PASSED</span>';
+    } else if (delta <= 0) {
+      countdown = '<span style="color:var(--dim)">Done</span>';
+    } else if (delta < 3600) {
+      countdown = `<span style="color:var(--red);font-weight:700">${Math.floor(delta/60)}m</span>`;
+    } else if (delta < 86400) {
+      const h = Math.floor(delta / 3600);
+      const m = Math.floor((delta % 3600) / 60);
+      countdown = `${h}h ${m}m`;
+    } else {
+      const d = Math.floor(delta / 86400);
+      countdown = `${d}d`;
+    }
+
+    const isPast = delta <= 0;
+
+    html += `<div class="news-item" style="${isPast ? 'opacity:0.4' : ''}">
+      <div style="flex:1">
+        <span class="news-impact ${impactDot}"></span>
+        <strong>${localTime}</strong>
+        <span style="margin-left:6px">${n.country}</span>
+        <span style="margin-left:4px;color:var(--dim)">${n.title}</span>
+      </div>
+      <div style="text-align:right;min-width:55px">
+        ${countdown}
+      </div>
+    </div>`;
+  });
+
+  panel.innerHTML = html;
+}
+
+function renderInsight() {
+  const el = document.getElementById('insight');
+  if (data.insight) {
+    el.innerHTML = data.insight;
+  }
+}
+
+function toggleInsight() {
+  const block = document.getElementById('insight-block');
+  const btn = document.getElementById('insight-toggle');
+  const isHidden = block.style.display === 'none';
+  block.style.display = isHidden ? '' : 'none';
+  btn.textContent = isHidden ? 'Hide Insight' : 'Show Insight';
+}
+
+// ============================================================
+// INTERACTIONS
+// ============================================================
+function selectMarket(key) {
+  selectedMarket = key;
+  renderCOTDetail(key);
+}
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filter = btn.dataset.filter;
+    render();
+  });
+});
+
+// News filter buttons
+document.querySelectorAll('.filter-btn[data-news]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn[data-news]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    newsFilter = btn.dataset.news;
+    render();
+  });
+});
+
+// Sort headers
+document.querySelectorAll('th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (sortKey === key) sortDir *= -1;
+    else { sortKey = key; sortDir = -1; }
+    render();
+  });
+});
+
+// Clock update — local time only (adapts to user's timezone)
+setInterval(() => {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}, 1000);
+
+// ============================================================
+// THEME
+// ============================================================
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  document.getElementById('theme-btn').textContent = next === 'dark' ? 'Light' : 'Dark';
+  localStorage.setItem('theme', next);
+}
+
+// Restore saved theme
+(function() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  document.getElementById('theme-btn').textContent = saved === 'dark' ? 'Light' : 'Dark';
+})();
+
+// ============================================================
+// INIT
+// ============================================================
+connectWS();
+
+// Initial data fetch
+fetchSnapshot();
+</script>
+</body>
+</html>
